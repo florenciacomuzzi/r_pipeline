@@ -1,0 +1,13 @@
+pipeline {  environment {
+    registry = "348517286947.dkr.ecr.us-east-1.amazonaws.com/r-pipeline/dev"
+    registryCredential = 'AWS_DW_CREDS'
+  }  agent any  stages {
+    stage('Building image') {
+      steps{
+        script {
+          docker.build registry + ":$BUILD_NUMBER"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+version: 0.2
+
+env:
+  variables:
+    REPOSITORY_NAME: "r-pipeline/dev"
+    REPOSITORY_URI: "348517286947.dkr.ecr.us-east-1.amazonaws.com/r-pipeline/dev"
+    AWS_DEFAULT_REGION: "us-east-1"
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}$CODEBUILD_BUILD_NUMBER
+#      - ./build_scripts/cache-load.sh
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_NAME:$IMAGE_TAG .
+      - docker tag $REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"r-pipeline","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+#      - ./build_scripts/cache-save.sh
+artifacts:
+    files: imagedefinitions.json
